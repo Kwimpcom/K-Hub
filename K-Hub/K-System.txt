@@ -1,0 +1,49 @@
+local ImGui = loadstring(game:HttpGet('https://github.com/depthso/Roblox-ImGUI/raw/main/ImGui.lua'))()
+
+local KeySystem = ImGui:CreateWindow({
+	Title = "K-Loader",
+	TabsBar = false,
+    Position = UDim2.new(0.4, 0, 0.5, 0),
+	AutoSize = "Y",
+	NoCollapse = true,
+	NoResize = true,
+	NoClose = false,
+})
+	
+local content = KeySystem:CreateTab({
+	Visible = true
+})
+
+
+local key = content:InputText({
+	Label = "key",
+	PlaceHolder = "key here",
+	Value = "",
+})
+
+content:Button({
+	Text = "confirm",
+	Callback = function()
+		if key:GetValue() == game.Players.LocalPlayer.DisplayName then
+			key:SetLabel("correct key!")
+            if not isfolder("K-Hub") then
+            local data = [[im blue da ba dee]]
+            local folder = makefolder("K-Hub")
+            writefile("K-Hub".."//pass.txt", data)
+            wait(1)
+            KeySystem:Close()
+            end
+            wait(1)
+            KeySystem:Close()
+		else
+			key:SetLabel("wrong key")
+            wait(0.5)
+            key:SetLabel("try again")
+		end
+	end,
+})
+
+local label = content:Label({
+    Text = "hint : its your display name",
+    TextTransparency = 0.7
+})
