@@ -30,9 +30,11 @@ content:Button({
             local data = [[im blue da ba dee]]
             local folder = makefolder("K-Hub")
             writefile("K-Hub".."//pass.txt", data)
+	    loadstring(game:HttpGet("https://raw.githubusercontent.com/Kwimpcom/K-Hub/refs/heads/main/K-Hub/K-Load.txt"))()
             wait(1)
             KeySystem:Close()
             end
+	    loadstring(game:HttpGet("https://raw.githubusercontent.com/Kwimpcom/K-Hub/refs/heads/main/K-Hub/K-Load.txt"))()
             wait(1)
             KeySystem:Close()
 		else
