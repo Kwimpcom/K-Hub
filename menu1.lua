@@ -1,269 +1,206 @@
-local menu = {}
+local UI = {}
 
---//================================================================================--
---//      Virtual Key Codes (for readability)
---//================================================================================--
-local VK = {
-    INSERT = 0x2D,
-    UP = 0x26,
-    DOWN = 0x28,
-    LEFT = 0x25,
-    RIGHT = 0x27,
-    RETURN = 0x0D -- The Enter key
+UI.windows = {}
+
+UI.keys = {
+	up = false,
+	down = false
 }
 
---//================================================================================--
---//      Configuration & Theme
---//================================================================================--
-menu.theme = {
-    background = { 0.1, 0.1, 0.1, 0.95 },
-    title_bar = { 0.15, 0.15, 0.15, 1.0 },
-    outline = { 0.3, 0.3, 0.3, 1.0 },
-    text = { 1.0, 1.0, 1.0, 1.0 },
-    tab_inactive = { 0.18, 0.18, 0.18, 1.0 },
-    tab_active = { 0.25, 0.25, 0.25, 1.0 },
-    control_background = { 0.2, 0.2, 0.2, 1.0 },
-    control_selected = { 0.4, 0.6, 1.0, 1.0 } -- Accent color for selection
+UI.latch = {
+	enter = false
 }
 
---//================================================================================--
---//      Internal State
---//================================================================================--
-menu.windows = {}
-menu.visible = true -- Show the menu by default
-menu.key_state = {}
-menu.last_key_state = {}
+local function draw_rounded_rect(x, y, w, h, r, c)
+	x, y = x + r, y + r
+	w, h = w - r, h - r
 
---//================================================================================--
---//      Private Helper Functions
---//================================================================================--
-local function was_key_pressed(key)
-    return menu.key_state[key] and not menu.last_key_state[key]
+	valex.draw_filled_rect(x, y, w, h, c)
+
+	valex.draw_filled_circle(w, h, r, c)
+	valex.draw_filled_circle(x, h, r, c)
+	valex.draw_filled_circle(x, y, r, c)
+	valex.draw_filled_circle(w, y, r, c)
+
+	valex.draw_filled_rect(w, y, w + r, h, c)
+	valex.draw_filled_rect(x, h, w, h + r, c)
+	valex.draw_filled_rect(x - r, y, x, h, c)
+	valex.draw_filled_rect(x, y - r, w, y, c)
 end
 
-local function unpack_color(color)
-    return color[1], color[2], color[3], color[4]
+local function draw_semirounded_rect(x, y, w, h, r, c)
+	x, y = x + r, y + r
+	w, h = w - r, h - r
+	if r > h then r = h end
+
+	valex.draw_filled_rect(x, y, w, h, c)
+	valex.draw_filled_circle(x, y, r, c)
+	valex.draw_filled_circle(w, y, r, c)
+
+	valex.draw_filled_rect(w, y, w + r, h, c)
+	valex.draw_filled_rect(x - r, y, x, h, c)
+	valex.draw_filled_rect(x, y - r, w, y, c)
 end
 
---//================================================================================--
---//      Drawing Functions
---//================================================================================--
-local function draw_window(win)
-    if not win.visible then return end
-
-    -- Main background and outline
-    valex.draw_filled_rect(win.x, win.y, win.w, win.h, unpack_color(menu.theme.background))
-    valex.draw_rect(win.x, win.y, win.w, win.h, unpack_color(menu.theme.outline))
-
-    -- Title bar
-    valex.draw_filled_rect(win.x, win.y, win.w, 30, unpack_color(menu.theme.title_bar))
-    local title_w, title_h = valex.get_text_size(win.title)
-    valex.draw_text(win.title, win.x + (win.w / 2) - (title_w / 2), win.y + 15 - (title_h / 2), unpack_color(menu.theme.text))
-
-    -- Tabs
-    if #win.tabs > 0 then
-        local tab_x = win.x + 5
-        for i, tab in ipairs(win.tabs) do
-            local color = (win.active_tab_index == i) and menu.theme.tab_active or menu.theme.tab_inactive
-            valex.draw_filled_rect(tab_x, win.y + 35, tab.w, tab.h, unpack_color(color))
-            local tab_text_w, tab_text_h = valex.get_text_size(tab.title)
-            valex.draw_text(tab.title, tab_x + (tab.w / 2) - (tab_text_w / 2), win.y + 35 + (tab.h / 2) - (tab_text_h / 2), unpack_color(menu.theme.text))
-            tab_x = tab_x + tab.w + 5
-        end
-
-        -- Controls for the active tab
-        local active_tab = win.tabs[win.active_tab_index]
-        if active_tab and #active_tab.controls > 0 then
-            for i, control in ipairs(active_tab.controls) do
-                local is_selected = (active_tab.selected_control_index == i)
-                control:render(win.x, win.y, is_selected)
-            end
-        end
-    end
+local function draw_item(ix, iy, iw, ih, bg, text, tc)
+	draw_rounded_rect(ix, iy, iw, ih, 6, bg)
+	valex.draw_text(text, ix / 2 + iw / 2, iy + 6, tc)
 end
 
---//================================================================================--
---//      Control Templates
---//================================================================================--
-local Button = {}
-Button.__index = Button
-function Button:new(props)
-    local obj = setmetatable({}, Button)
-    obj.title = props.title or "Button"
-    obj.x = props.x or 10
-    obj.y = props.y or 10
-    obj.w = props.w or 100
-    obj.h = props.h or 25
-    obj.callback = props.callback or function() print(obj.title .. " pressed.") end
-    return obj
+function UI:CreateWindow(args)
+	local win = {
+		x = args.x,
+		y = args.y,
+		w = args.w,
+		h = args.h,
+		r = args.Radius or 6,
+		c = args.AccentColor or color3.new(1, 0.85, 0),
+		bc = args.BackColor or color3.new(0.15, 0.15, 0.15),
+		t = args.Title or "Window",
+		v = args.Visible ~= false,
+		items = {},
+		selected = 1
+	}
+
+	function win:CreateButton(args)
+		local btn = {
+			type = "button",
+			text = args.text or "Button",
+			bg = args.bg or win.c,
+			TextColor = args.TextColor or color3.white(),
+			callback = args.Callback
+		}
+		self.items[#self.items + 1] = btn
+		return btn
+	end
+
+	function win:CreateLabel(args)
+		local lbl = {
+			type = "label",
+			text = args.text or "",
+			TextColor = args.TextColor or color3.white()
+		}
+		self.items[#self.items + 1] = lbl
+		return lbl
+	end
+
+	function win:CreateToggle(args)
+		local tgl = {
+			type = "toggle",
+			text = args.Text or "Toggle",
+			value = args.Value or false,
+			bg = args.BackColor or win.c,
+			TextColor = args.TextColor or color3.white(),
+			callback = args.Callback
+		}
+		self.items[#self.items + 1] = tgl
+		return tgl
+	end
+
+	UI.windows[#UI.windows + 1] = win
+	return win
 end
 
-function Button:render(win_x, win_y, is_selected)
-    local abs_x, abs_y = win_x + self.x, win_y + self.y
-    valex.draw_filled_rect(abs_x, abs_y, self.w, self.h, unpack_color(menu.theme.control_background))
-    if is_selected then
-        valex.draw_rect(abs_x, abs_y, self.w, self.h, unpack_color(menu.theme.control_selected), 2.0)
-    end
-    local text_w, text_h = valex.get_text_size(self.title)
-    valex.draw_text(self.title, abs_x + (self.w / 2) - (text_w / 2), abs_y + (self.h / 2) - (text_h / 2), unpack_color(menu.theme.text))
+function UI:Draw()
+	for _, win in ipairs(UI.windows) do
+		if not win.v then goto continue end
+
+		draw_rounded_rect(win.x - 1, win.y - 1, win.w + 1, win.h + 1, win.r, color3.black())
+		draw_rounded_rect(win.x, win.y, win.w, win.h, win.r, win.bc)
+		draw_semirounded_rect(win.x, win.y, win.w, win.y + 35, win.r, win.c)
+
+		valex.draw_text(win.t, win.x / 2 + win.w / 2, win.y + 5, color3.white())
+
+		local iy = win.y + 40
+
+		for i, item in ipairs(win.items) do
+			local ix = win.x + 15
+			local iw = win.w - 30
+			local ih = iy + 30
+
+			if item.type == "label" then
+				valex.draw_text(item.text, ix + (iw - ix) / 2, iy + 6, item.TextColor)
+
+			elseif item.type == "button" then
+				draw_item(ix, iy, iw, ih, item.bg, item.text, item.TextColor)
+
+			elseif item.type == "toggle" then
+				draw_item(ix, iy, iw, ih, item.bg, item.text, item.TextColor)
+
+				local tc = item.value and color3.green() or color3.red()
+				draw_rounded_rect(iw - 5, iy + 5, iw - 25, ih - 5, 0, tc)
+			end
+
+			if i == win.selected then
+				valex.draw_text("<", win.w - 18, iy + 6, color3.white())
+			end
+
+			iy = ih + 15
+		end
+
+		::continue::
+	end
 end
 
-function Button:activate()
-    self.callback()
+function UI:UpdateNavigation()
+	local down  = valex.is_key_pressed(0x28)
+	local up    = valex.is_key_pressed(0x26)
+	local enter = valex.is_key_pressed(0x0D)
+
+	for _, win in ipairs(UI.windows) do
+		if not win.v then goto continue end
+
+		local items = win.items
+		local count = #items
+		if count == 0 then goto continue end
+
+		local function skip(dir)
+			local safety = 0
+			while items[win.selected] and items[win.selected].type == "label" do
+				win.selected = win.selected + dir
+				if win.selected < 1 then win.selected = count end
+				if win.selected > count then win.selected = 1 end
+				safety = safety + 1
+				if safety > count then break end
+			end
+		end
+
+		if down and not UI.keys.down then
+			win.selected = win.selected % count + 1
+			skip(1)
+		end
+
+		if up and not UI.keys.up then
+			win.selected = win.selected - 1
+			if win.selected < 1 then win.selected = count end
+			skip(-1)
+		end
+
+		if enter and not UI.latch.enter then
+			UI.latch.enter = true
+
+			local item = items[win.selected]
+			if item then
+				if item.type == "button" and item.callback then
+					item.callback()
+				elseif item.type == "toggle" then
+					item.value = not item.value
+					if item.callback then
+						item.callback(item.value)
+					end
+				end
+			end
+		end
+
+		if not enter then
+			UI.latch.enter = false
+		end
+
+		::continue::
+	end
+
+	UI.keys.down = down
+	UI.keys.up   = up
 end
 
-local Toggle = {}
-Toggle.__index = Toggle
-function Toggle:new(props)
-    local obj = setmetatable({}, Toggle)
-    obj.title = props.title or "Toggle"
-    obj.x = props.x or 10
-    obj.y = props.y or 10
-    obj.w = 15
-    obj.h = 15
-    obj.toggled = props.default or false
-    obj.callback = props.callback or function(state) print(obj.title .. " toggled to " .. tostring(state)) end
-    return obj
-end
-
-function Toggle:render(win_x, win_y, is_selected)
-    local abs_x, abs_y = win_x + self.x, win_y + self.y
-    valex.draw_filled_rect(abs_x, abs_y, self.w, self.h, unpack_color(menu.theme.control_background))
-    if is_selected then
-        valex.draw_rect(abs_x, abs_y, self.w, self.h, unpack_color(menu.theme.control_selected), 2.0)
-    end
-    if self.toggled then
-        valex.draw_filled_rect(abs_x + 3, abs_y + 3, self.w - 6, self.h - 6, unpack_color(menu.theme.control_selected))
-    end
-    local _, text_h = valex.get_text_size(self.title)
-    valex.draw_text(self.title, abs_x + self.w + 10, abs_y + (self.h / 2) - (text_h / 2), unpack_color(menu.theme.text))
-end
-
-function Toggle:activate()
-    self.toggled = not self.toggled
-    self.callback(self.toggled)
-end
-
---//================================================================================--
---//      Public API
---//================================================================================--
-function menu:CreateWindow(props)
-    local new_window = {
-        title = props.title or "Window",
-        w = props.width or 300,
-        h = props.height or 400,
-        x = props.x or 100,
-        y = props.y or 100,
-        visible = true,
-        tabs = {},
-        active_tab_index = 1
-    }
-    table.insert(self.windows, new_window)
-    return new_window
-end
-
-function menu:AddTab(parent_window, props)
-    local new_tab = {
-        title = props.title or "Tab",
-        w = props.width or 80,
-        h = props.height or 25,
-        controls = {},
-        selected_control_index = 1
-    }
-    table.insert(parent_window.tabs, new_tab)
-    return new_tab
-end
-
-function menu:AddButton(parent_tab, props)
-    table.insert(parent_tab.controls, Button:new(props))
-end
-
-function menu:AddToggle(parent_tab, props)
-    table.insert(parent_tab.controls, Toggle:new(props))
-end
-
---//================================================================================--
---//      Main Loop Handlers
---//================================================================================--
-function menu:Update()
-    -- Copy current key state to last state
-    self.last_key_state = {}
-    for k, v in pairs(self.key_state) do
-        self.last_key_state[k] = v
-    end
-
-    -- Update key states for debouncing
-    self.key_state = {}
-    for _, key_code in pairs(VK) do
-        self.key_state[key_code] = valex.is_key_pressed(key_code)
-    end
-
-    -- Toggle menu visibility
-    if was_key_pressed(VK.INSERT) then
-        self.visible = not self.visible
-    end
-
-    if not self.visible then 
-        return 
-    end
-
-    -- For now, we only handle the first window. Multi-window support could be added.
-    local active_window = self.windows[1]
-    if not active_window or #active_window.tabs == 0 then 
-        return 
-    end
-    
-    local active_tab = active_window.tabs[active_window.active_tab_index]
-    if not active_tab or #active_tab.controls == 0 then
-        return
-    end
-
-    -- NAV: UP/DOWN to change selected control
-    if was_key_pressed(VK.DOWN) then
-        active_tab.selected_control_index = active_tab.selected_control_index + 1
-        if active_tab.selected_control_index > #active_tab.controls then
-            active_tab.selected_control_index = 1 -- Wrap around
-        end
-    elseif was_key_pressed(VK.UP) then
-        active_tab.selected_control_index = active_tab.selected_control_index - 1
-        if active_tab.selected_control_index < 1 then
-            active_tab.selected_control_index = #active_tab.controls -- Wrap around
-        end
-    end
-
-    -- NAV: LEFT/RIGHT to change active tab
-    if was_key_pressed(VK.RIGHT) then
-        active_window.active_tab_index = active_window.active_tab_index + 1
-        if active_window.active_tab_index > #active_window.tabs then
-            active_window.active_tab_index = 1 -- Wrap around
-        end
-    elseif was_key_pressed(VK.LEFT) then
-        active_window.active_tab_index = active_window.active_tab_index - 1
-        if active_window.active_tab_index < 1 then
-            active_window.active_tab_index = #active_window.tabs -- Wrap around
-        end
-    end
-
-    -- ACTION: ENTER to activate selected control
-    if was_key_pressed(VK.RETURN) then
-        local selected_control = active_tab.controls[active_tab.selected_control_index]
-        if selected_control and selected_control.activate then
-            selected_control:activate()
-        end
-    end
-end
-
-function menu:Render()
-    if not self.visible then return end
-    for _, win in ipairs(self.windows) do
-        draw_window(win)
-    end
-end
-
-function menu:Init()
-    valex.register("update", function() self:Update() end)
-    valex.register("render", function() self:Render() end)
-    print("Keyboard UI Initialized. Press INSERT to toggle.")
-end
-
-return menu
+return UI
