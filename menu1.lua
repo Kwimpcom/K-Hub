@@ -221,37 +221,6 @@ function UI:UpdateNavigation()
 	UI.keys.enter = valex.is_key_pressed(0x0D)
 end
 
-local main = UI:CreateWindow({
-	x = 400,
-	y = 125,
-	w = 850,
-	h = 550,
-	Radius = 10,
-	AccentColor = color3.new(1, 0.65, 0),
-	BackColor = color3.new(0.15, 0.15, 0.15),
-	Title = "Main Menu"
-})
-
-main:CreateLabel({
-	text = "Main Options"
-})
-
-main:CreateToggle({
-	text = "God Mode",
-	default = false,
-	Callback = function(state)
-		print("God Mode:" .. tostring(state))
-	end
-})
-
-main:CreateButton({
-	text = "Unload",
-	Callback = function()
-		print("Exiting UI")
-	end
-})
-
-
 valex.register("update", function()
 	UI:UpdateNavigation()
 end)
