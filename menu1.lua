@@ -1,6 +1,3 @@
-if _G.__SIMPLE_UI_LOADED then
-    return _G.__SIMPLE_UI
-end
 
 local UI = {}
 
@@ -242,6 +239,4 @@ UI.keys.enter = enter
 
 end
 
-_G.__SIMPLE_UI_LOADED = true
-_G.__SIMPLE_UI = UI
 return UI
