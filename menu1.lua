@@ -83,7 +83,7 @@ end
 function win:CreateLabel(args)  
 local lbl = {  
 	type = "label",  
-	text = args.text or "",  
+	text = args.Text or "",  
 	TextColor = args.TextColor or color3.white()  
 }  
 
