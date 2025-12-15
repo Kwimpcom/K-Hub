@@ -70,8 +70,8 @@ selected = 1
 function win:CreateButton(args)  
 	local btn = {  
 		type = "button",  
-		text = args.text or "Button",  
-		bg = args.bg or win.c,  
+		text = args.Text or "Button",  
+		bg = args.BackColor or win.c,  
 		TextColor = args.TextColor or color3.white(),  
 		callback = args.Callback  
 	}  
